@@ -5,10 +5,12 @@ import re
 import json
 from vec import Vec
 import csv
+from utils import listToSet
 
 
-billList = set([])
-memberIDSet = set([])
+billList = {}
+billSet = set({})
+memberIDDict = {}
 members = {}
 
 def getAssemblyList():
@@ -32,8 +34,8 @@ def getVoteList(url):
 	requestURL = "http://likms.assembly.go.kr/bill/billVoteResultDetail.do?"
 	urls = []
 	for vote in voteList:
-		resultURL = "%sidMaster=%s&billId=%s&billNo=%s" % (requestURL, vote["idmaster"], vote["billid"], vote["billno"])
-		billList.add(vote['billno'])
+		resultURL = "%sidMaster=%s&billNo=%s&billId=%s" % (requestURL, vote["idmaster"], vote["billno"], vote["billid"])
+		billList[vote['billid']] = vote['billname']
 		urls.append(resultURL)
 	return urls
 
@@ -41,51 +43,56 @@ def getVoteResults(assemblyList):
 	result = []
 	for url in assemblyList:
 		result = result +  getVoteList(url)
+
 	return result
 
-def addMember(newMemberID, billNo, value):
-	if newMemberID not in memberIDSet:
-		newMember = Vec(billList,{})
-		memberIDSet.add(newMemberID)
-		members[newMemberID] = newMember;
+def addMember(newMemberID, memberName, billSet, billNo, value):
+	if newMemberID not in memberIDDict.keys():
+		newMember = Vec(billSet,{})
+		memberIDDict[newMemberID] = memberName
+		members[newMemberID] = newMember;		
 	members[newMemberID][billNo] = value;
 
 
-def parseVote(url):
+def parseVote(url, billSet):
 	data = requests.get(url)
 	soup = BeautifulSoup(data.text.encode('utf-8'),'html.parser')
 	p=re.compile('\d+')
-	billNo = url[-7:]
+	billNo = url[-34:]
 
 	# approve
 	for link in soup.select("#tbody > tr > td > a"):
 		href = link.get('href')
+		memberName = link.get_text()
 		memberID = p.findall(href)[0]
-		addMember(memberID,billNo, 1)
+		addMember(memberID, memberName, billSet, billNo, 1)
 
 	# negative
 	for link in soup.select("#tbody1 > tr > td > a"):
 		href = link.get('href')
+		memberName = link.get_text()
 		memberID = p.findall(href)[0]
-		addMember(memberID,billNo, -1)	
+		addMember(memberID, memberName, billSet, billNo, -1)	
 	# give up
 	for link in soup.select("#tbody2 > tr > td > a"):
 		href = link.get('href')
+		memberName = link.get_text()
 		memberID = p.findall(href)[0]
-		addMember(memberID,billNo, 0)
+		addMember(memberID, memberName, billSet, billNo, 0)
 
 
 def getVoteLog():
 	voteList = getVoteResults(getAssemblyList())
+	billSet = listToSet(billList.keys())
 	for vote in voteList:
-		parseVote(vote)
+		parseVote(vote,billSet)
 
 def saveVoteLog(filename):
 	with open(filename, 'w') as csv_file:
 		writer = csv.writer(csv_file)
-		for memberID in memberIDSet:
-			for billNo in billList:
-				writer.writerow([memberID, billNo, members[memberID][billNo]])
+		for memberID in memberIDDict.keys():
+			for billNo in billList.keys():
+				writer.writerow([memberIDDict[memberID], memberID, billNo, billList[billNo], members[memberID][billNo]])
 
 getVoteLog()
 saveVoteLog('result.csv')
