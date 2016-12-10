@@ -1,8 +1,0 @@
-http://likms.assembly.go.kr/bill/billVoteResultDetail.do?billNo=2002157&idMaster=103186&billId=PRC_M1E6M0C9J0Z6Z1Y1X0F3Y4I8J8D2R2
-
-http://likms.assembly.go.kr/bill/billVoteResultDetail.do?
-billNo=2002157
-idMaster=103186
-billId=PRC_M1E6M0C9J0Z6Z1Y1X0F3Y4I8J8D2R2
-
-http://likms.assembly.go.kr/bill/billVoteResultListAjax.do?currentsDt=20161203

@@ -11,7 +11,7 @@ billList = set([])
 memberIDSet = set([])
 members = {}
 
-def getVoteList():
+def getAssemblyList():
 	targetURL = "http://likms.assembly.go.kr/bill/billVoteResult.do"
 	data = requests.get(targetURL)
 	soup = BeautifulSoup(data.text.encode('utf-8'),'html.parser');
@@ -25,7 +25,7 @@ def getVoteList():
 		urls.append(resultURL)
 	return urls
 
-def parseVoteList(url):
+def getVoteList(url):
 	data = requests.get(url)
 	js = json.loads(data.text);
 	voteList = js['resListVo']
@@ -37,10 +37,10 @@ def parseVoteList(url):
 		urls.append(resultURL)
 	return urls
 
-def getVoteResultList(urls):
+def getVoteResults(assemblyList):
 	result = []
-	for url in urls:
-		result = result +  parseVoteList(url)
+	for url in assemblyList:
+		result = result +  getVoteList(url)
 	return result
 
 def addMember(newMemberID, billNo, value):
@@ -73,17 +73,19 @@ def parseVote(url):
 		href = link.get('href')
 		memberID = p.findall(href)[0]
 		addMember(memberID,billNo, 0)
-	
 
 
-voteURLList = getVoteResultList(getVoteList())
-for vote in voteURLList:
-	parseVote(vote)
-with open('dict.csv', 'w') as csv_file:
-	writer = csv.writer(csv_file)
-	for memberID in memberIDSet:
-		for billNo in billList:
-			writer.writerow([memberID, billNo, members[memberID][billNo]])
-#parseVote("http://likms.assembly.go.kr/bill/billVoteResultDetail.do?billId=PRC_M1E6M0C9J0Z6Z1Y1X0F3Y4I8J8D2R2&idMaster=103186&billNo=2002157")
-#data = requests.get(voteURLList[0])
-#print(data.text.encode('utf-8'))
+def getVoteLog():
+	voteList = getVoteResults(getAssemblyList())
+	for vote in voteList:
+		parseVote(vote)
+
+def saveVoteLog(filename):
+	with open(filename, 'w') as csv_file:
+		writer = csv.writer(csv_file)
+		for memberID in memberIDSet:
+			for billNo in billList:
+				writer.writerow([memberID, billNo, members[memberID][billNo]])
+
+getVoteLog()
+saveVoteLog('result.csv')
